@@ -1,0 +1,8 @@
+#!/bin/bash
+
+newbrightness=$((`cat /sys/class/backlight/radeon_bl0/brightness`-2))
+
+if [ "${newbrightness}" -ge 0 ]
+then
+  echo "${newbrightness}" > /sys/class/backlight/radeon_bl0/brightness
+fi

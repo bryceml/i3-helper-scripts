@@ -1,0 +1,38 @@
+#!/usr/bin/python3
+
+import time, subprocess, os, psutil, sys
+
+def child():
+  sys.stderr=open('/dev/null', 'w')
+  sys.stdout=open('/dev/null', 'w')
+  if os.path.exists('/run/user/' + str(os.getuid()) + '/batt-warn.pid'):
+    try:
+      f=open('/run/user/' + str(os.getuid()) + '/batt-warn.pid', 'r')
+      pid=int(f.read())
+      f.close()
+    except Exception:
+      pass
+    else:
+      if psutil.pid_exists(pid):
+        os.kill(pid, 15)
+        time.sleep(2)
+      if psutil.pid_exists(pid):
+        os.kill(pid, 9)
+
+  with open('/run/user/' + str(os.getuid()) + '/batt-warn.pid', 'w') as myfile:
+    myfile.write(str(os.getpid()))
+
+  with open('/sys/class/power_supply/BAT0/energy_full', 'r') as myfile:
+    full=myfile.read().replace('\n', '')
+
+  while True:
+    with open('/sys/class/power_supply/BAT0/energy_now', 'r') as myfile:
+      now=myfile.read().replace('\n', '')
+    if (float(now) / float(full)) < .1:
+      subprocess.call(['/usr/bin/notify-send','-i','/usr/share/icons/elementary-xfce/status/32/battery-000.png','-t','4000','{:.1%}'.format(float(now) / float(full)) + ' battery left'])
+      if (float(now) / float(full)) < .04:
+        subprocess.call(['systemctl','suspend'])
+    time.sleep(10)
+
+if os.fork() == 0:
+  child()
